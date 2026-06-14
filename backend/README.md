@@ -175,7 +175,7 @@ This is a prototype decision-support system. It provides spatial suitability gui
 https://github.com/Alliance-D/Business-Spatial-suitability-recommendation-frontend.git
 
 # Link to Youtube:
-
+https://youtu.be/Ql3eeYIyQyw
 
 # Link to report:
 https://docs.google.com/document/d/1zhPXuk-C4jSV5Wq2OILvuvV3lHRG8ozHfMWlV3TQZys/edit?usp=sharing
