@@ -1,0 +1,66 @@
+{
+  "model": "RandomForestClassifier",
+  "best_params": {
+    "max_depth": "10",
+    "max_features": "0.5",
+    "min_samples_leaf": "1",
+    "min_samples_split": "4",
+    "n_estimators": "460",
+    "class_weight": "balanced",
+    "bootstrap": "True",
+    "oob_score": "True",
+    "random_state": "42",
+    "n_jobs": "-1"
+  },
+  "features": [
+    "comp_count_300",
+    "comp_count_500",
+    "comp_count_1k",
+    "traffic_morning",
+    "traffic_midday",
+    "traffic_evening",
+    "dist_transport",
+    "dist_market",
+    "dist_road",
+    "pop_density",
+    "road_type",
+    "avg_traffic",
+    "traffic_peak_ratio",
+    "comp_gradient",
+    "access_score",
+    "market_exposure"
+  ],
+  "base_features": [
+    "comp_count_300",
+    "comp_count_500",
+    "comp_count_1k",
+    "traffic_morning",
+    "traffic_midday",
+    "traffic_evening",
+    "dist_transport",
+    "dist_market",
+    "dist_road",
+    "pop_density",
+    "road_type"
+  ],
+  "engineered_features": [
+    "avg_traffic",
+    "traffic_peak_ratio",
+    "comp_gradient",
+    "access_score",
+    "market_exposure"
+  ],
+  "target": "reference_label",
+  "business_category": "personal_care_services",
+  "clusters_train": [
+    "Kimironko",
+    "Remera"
+  ],
+  "cluster_test": "Kacyiru",
+  "n_train": 145,
+  "n_test": 42,
+  "test_auc_roc": 0.8938,
+  "test_f1": 0.6122,
+  "oob_score": 0.8897,
+  "shap_base_value": 0.5058
+}
