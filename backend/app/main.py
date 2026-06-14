@@ -4,6 +4,14 @@ from app.routers import query, admin
 from app.db import engine
 import app.models as models
 
+try:
+    with engine.connect() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+        conn.commit()
+        print("PostGIS extension enabled")
+except Exception as e:
+    print(f"PostGIS extension setup failed: {e}")
+
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
 
