@@ -168,3 +168,14 @@ python -c "from app.db import SessionLocal; from sqlalchemy import text; db=Sess
 ## Notes
 
 This is a prototype decision-support system. It provides spatial suitability guidance based on available observation data. It does not predict business success or failure.
+
+
+
+# Link to frontend repo:
+https://github.com/Alliance-D/Business-Spatial-suitability-recommendation-frontend.git
+
+# Link to Youtube:
+
+
+# Link to report:
+https://docs.google.com/document/d/1zhPXuk-C4jSV5Wq2OILvuvV3lHRG8ozHfMWlV3TQZys/edit?usp=sharing
