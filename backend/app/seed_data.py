@@ -1,90 +1,101 @@
-"""Seed the database with observations from kigali_spatial_dataset.csv"""
+"""Seeds the database with the reference dataset and POI layer."""
 
+import json
 import os
 import pandas as pd
-from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.models.observation import Observation
-from app.db import SessionLocal, engine
 
-# Path to CSV (adjust if running from different location)
-CSV_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "backend", "ml", "kigali_spatial_dataset.csv")
+from app.db import SessionLocal
+from app.models.observation import Observation, POIMarket, POITransport, POIRoad
+
+BASE_DIR = os.path.dirname(__file__)
+ML_DIR   = os.path.join(BASE_DIR, "..", "ml")
+CSV_PATH = os.path.join(ML_DIR, "kigali_personal_care_dataset.csv")
+POI_PATH = os.path.join(ML_DIR, "poi_layer.json")
 
 
 def seed_observations():
-    """Load observations from CSV and insert into database."""
-    
-    # Check if CSV exists
     if not os.path.exists(CSV_PATH):
-        print(f"⚠ CSV not found at {CSV_PATH}. Skipping seed.")
+        print(f"Dataset not found at {CSV_PATH}. Skipping observation seed.")
         return
-    
-    # Read CSV
-    df = pd.read_csv(CSV_PATH)
-    print(f"✔ Loaded {len(df)} records from CSV")
-    
+
     db = SessionLocal()
     try:
-        # Check if observations already exist
-        existing_count = db.execute(text("SELECT COUNT(*) FROM observations")).scalar()
-        if existing_count > 0:
-            print(f"ℹ Database already contains {existing_count} observations. Skipping seed.")
+        existing = db.execute(text("SELECT COUNT(*) FROM observations")).scalar()
+        if existing > 0:
+            print(f"observations already has {existing} rows. Skipping seed.")
             return
-        
-        # For this dataset, we need to provide lat/lon. 
-        # The CSV data appears to be from Kigali clusters.
-        # We'll use a simple spatial distribution across Kigali (center: -1.9441, 30.0619)
-        # Cluster 0, 1, 2 = different geographic zones (synthetic distribution for demo)
-        
-        cluster_coords = {
-            0: (-1.95, 30.06),   # Central
-            1: (-1.94, 30.08),   # Northeast
-            2: (-1.96, 30.05),   # Southwest
-        }
-        
-        records_added = 0
-        for idx, row in df.iterrows():
-            cluster_id = int(row['cluster'])
-            lat, lon = cluster_coords.get(cluster_id, (-1.9441, 30.0619))
-            
-            # Add slight variance per index to spread points
-            lat += (idx % 10) * 0.003
-            lon += (idx % 10) * 0.003
-            
-            obs = Observation(
-                geom=f"SRID=4326;POINT({lon} {lat})",
-                biz_category=str(int(row['biz_category']) if pd.notna(row['biz_category']) else 0),
-                comp_count_300=int(row['comp_count_300']),
-                comp_count_500=int(row['comp_count_500']),
-                comp_count_1k=int(row['comp_count_1k']),
-                traffic_morning=int(row['traffic_morning']),
-                traffic_midday=int(row['traffic_midday']),
-                traffic_evening=int(row['traffic_evening']),
-                dist_transport=int(row['dist_transport']),
-                dist_market=int(row['dist_market']),
-                dist_road=int(row['dist_road']),
-                pop_density=float(row['pop_density']),
-                road_type=bool(int(row['road_type'])),
-                stability_label=bool(int(row['stability_label'])),
-                cluster_id=cluster_id
-            )
-            db.add(obs)
-            records_added += 1
-        
+
+        df = pd.read_csv(CSV_PATH)
+        inserted = 0
+
+        for _, row in df.iterrows():
+            label = bool(int(row["reference_label"]))
+            db.add(Observation(
+                geom=f"SRID=4326;POINT({row['longitude']} {row['latitude']})",
+                # stability_label is the original NOT NULL column — set it to the label value
+                stability_label=label,
+                # reference_label is the column added later — keep in sync
+                reference_label=label,
+                comp_count_300=int(row["comp_count_300"]),
+                comp_count_500=int(row["comp_count_500"]),
+                comp_count_1k=int(row["comp_count_1k"]),
+                traffic_morning=int(row["traffic_morning"]),
+                traffic_midday=int(row["traffic_midday"]),
+                traffic_evening=int(row["traffic_evening"]),
+                dist_transport=int(row["dist_transport"]),
+                dist_market=int(row["dist_market"]),
+                dist_road=int(row["dist_road"]),
+                pop_density=float(row["pop_density"]),
+                road_type=bool(int(row["road_type"])),
+                cluster_id=int(row["cluster"]),
+                cluster_name=str(row["cluster_name"]),
+            ))
+            inserted += 1
+
         db.commit()
-        print(f"✔ Inserted {records_added} observations")
-        
-        # Create spatial index for performance
-        try:
-            db.execute(text("CREATE INDEX IF NOT EXISTS idx_observations_geom ON observations USING GIST(geom)"))
-            db.commit()
-            print("✔ Created spatial index on observations.geom")
-        except Exception as e:
-            print(f"⚠ Spatial index creation (may already exist): {e}")
-        
-    except Exception as e:
+        print(f"Inserted {inserted} observations.")
+
+    except Exception as exc:
         db.rollback()
-        print(f"✗ Seed error: {e}")
+        print(f"Observation seed failed: {exc}")
+        raise
+    finally:
+        db.close()
+
+
+def seed_poi_layer():
+    if not os.path.exists(POI_PATH):
+        print(f"POI layer not found at {POI_PATH}. Skipping POI seed.")
+        return
+
+    db = SessionLocal()
+    try:
+        existing = db.execute(text("SELECT COUNT(*) FROM poi_market")).scalar()
+        if existing > 0:
+            print(f"poi_market already has {existing} rows. Skipping POI seed.")
+            return
+
+        with open(POI_PATH) as f:
+            poi = json.load(f)
+
+        for m in poi["markets"]:
+            db.add(POIMarket(name=m["name"], geom=f"SRID=4326;POINT({m['lon']} {m['lat']})"))
+
+        for t in poi["transport"]:
+            db.add(POITransport(name=t["name"], geom=f"SRID=4326;POINT({t['lon']} {t['lat']})"))
+
+        for r in poi["roads"]:
+            wkt_points = ", ".join(f"{p[1]} {p[0]}" for p in r["points"])
+            db.add(POIRoad(name=r["name"], geom=f"SRID=4326;LINESTRING({wkt_points})"))
+
+        db.commit()
+        print(f"Inserted {len(poi['markets'])} markets, {len(poi['transport'])} "
+              f"transport stops, {len(poi['roads'])} roads.")
+
+    except Exception as exc:
+        db.rollback()
+        print(f"POI seed failed: {exc}")
         raise
     finally:
         db.close()
@@ -92,3 +103,4 @@ def seed_observations():
 
 if __name__ == "__main__":
     seed_observations()
+    seed_poi_layer()

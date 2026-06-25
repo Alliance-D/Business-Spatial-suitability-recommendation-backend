@@ -1,37 +1,43 @@
+"""Pydantic request/response schemas for public API endpoints."""
+
 from pydantic import BaseModel, Field
 from typing import List, Optional
-from datetime import datetime
 
-class SuitabilityQueryRequest(BaseModel):
-    latitude: float = Field(..., description="GPS latitude (WGS84)")
-    longitude: float = Field(..., description="GPS longitude (WGS84)")
-    business_category: str = Field(..., description="Business category (e.g., 'personal_care')")
-    # Analysis radius in meters used for buffer-based aggregations (optional)
-    radius_meters: Optional[int] = Field(500, description="Analysis radius in meters (e.g., 500)")
 
-class FactorAssessment(BaseModel):
-    name: str
-    value: float
-    assessment: str  # "low", "moderate", "high"
-    shap_value: float
+class AssessRequest(BaseModel):
+    latitude: float = Field(..., ge=-90, le=90, description="GPS latitude (WGS84)")
+    longitude: float = Field(..., ge=-180, le=180, description="GPS longitude (WGS84)")
+    business_category: str = Field(
+        default="personal_care",
+        description="Business category. Only 'personal_care' is supported in this version.",
+    )
+    radius_meters: Optional[int] = Field(
+        default=500, description="Analysis radius in metres (300, 500, or 1000)."
+    )
 
-class SuitabilityQueryResponse(BaseModel):
-    suitability_score: float = Field(..., description="Overall suitability score 0-1")
-    suitability_label: str = Field(..., description="Label: strong/moderate/weak")
-    factors: List[FactorAssessment]
-    top_positive_factors: List[str]
-    top_negative_factors: List[str]
+
+class FactorOut(BaseModel):
+    factor: str
+    rating: str  # favourable | borderline | unfavourable
+    detail: str
+    explanation: str
+    shap_contribution: float
+
+
+class AssessResponse(BaseModel):
+    suitability_probability: float = Field(..., ge=0, le=1)
+    suitability_band: str  # FAVOURABLE | BORDERLINE | UNFAVOURABLE
+    factors: List[FactorOut]
     disclaimer: str
+
 
 class CategoryResponse(BaseModel):
     categories: List[str]
-    subtypes: dict
 
-class ModelStatusResponse(BaseModel):
-    version: str
-    auc_roc: float
-    precision: float
-    recall: float
-    f1_score: float
-    deployed: bool
-    created_at: datetime
+
+class SchemaResponse(BaseModel):
+    base_features: List[str]
+    engineered_features: List[str]
+    distance_bands: dict
+    target: str
+    notes: str

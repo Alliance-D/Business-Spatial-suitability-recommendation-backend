@@ -1,0 +1,140 @@
+{
+  "markets": [
+    {
+      "name": "Kimironko Market",
+      "lat": -1.9496,
+      "lon": 30.1263,
+      "cluster": "Kimironko"
+    },
+    {
+      "name": "Remera Market",
+      "lat": -1.9527,
+      "lon": 30.116,
+      "cluster": "Remera"
+    },
+    {
+      "name": "Kacyiru Market",
+      "lat": -1.9351,
+      "lon": 30.0821,
+      "cluster": "Kacyiru"
+    }
+  ],
+  "transport": [
+    {
+      "name": "Kimironko Transport Stop 1",
+      "lat": -1.952,
+      "lon": 30.1228,
+      "cluster": "Kimironko"
+    },
+    {
+      "name": "Kimironko Transport Stop 2",
+      "lat": -1.947,
+      "lon": 30.1296,
+      "cluster": "Kimironko"
+    },
+    {
+      "name": "Remera Transport Stop 1",
+      "lat": -1.955,
+      "lon": 30.114,
+      "cluster": "Remera"
+    },
+    {
+      "name": "Remera Transport Stop 2",
+      "lat": -1.95,
+      "lon": 30.1182,
+      "cluster": "Remera"
+    },
+    {
+      "name": "Kacyiru Transport Stop 1",
+      "lat": -1.9375,
+      "lon": 30.0798,
+      "cluster": "Kacyiru"
+    },
+    {
+      "name": "Kacyiru Transport Stop 2",
+      "lat": -1.9325,
+      "lon": 30.0846,
+      "cluster": "Kacyiru"
+    }
+  ],
+  "roads": [
+    {
+      "name": "Kimironko Main Road",
+      "points": [
+        [
+          -1.9532,
+          30.1218
+        ],
+        [
+          -1.9512,
+          30.124
+        ],
+        [
+          -1.9496,
+          30.1263
+        ],
+        [
+          -1.9478,
+          30.1286
+        ],
+        [
+          -1.946,
+          30.1308
+        ]
+      ],
+      "cluster": "Kimironko"
+    },
+    {
+      "name": "Remera Main Road",
+      "points": [
+        [
+          -1.9565,
+          30.113
+        ],
+        [
+          -1.954,
+          30.1148
+        ],
+        [
+          -1.9527,
+          30.116
+        ],
+        [
+          -1.951,
+          30.1175
+        ],
+        [
+          -1.9492,
+          30.119
+        ]
+      ],
+      "cluster": "Remera"
+    },
+    {
+      "name": "Kacyiru Main Road",
+      "points": [
+        [
+          -1.9385,
+          30.079
+        ],
+        [
+          -1.9365,
+          30.0808
+        ],
+        [
+          -1.9351,
+          30.0821
+        ],
+        [
+          -1.9335,
+          30.0836
+        ],
+        [
+          -1.9318,
+          30.0852
+        ]
+      ],
+      "cluster": "Kacyiru"
+    }
+  ]
+}

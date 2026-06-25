@@ -1,24 +1,42 @@
-from pathlib import Path
+"""
+Loads the trained Random Forest pipeline, scaler, and SHAP explainer
+produced by the model development notebook, and exposes prediction and
+explanation functions to the API layer.
+"""
+
 import json
+from pathlib import Path
+from typing import Optional
+
 import joblib
+import numpy as np
 import pandas as pd
 
-ARTIFACT_DIR = Path(__file__).resolve().parents[2] / "ml" / "artifacts"
-MODEL_PATH = ARTIFACT_DIR / "rf_pipeline.joblib"
+ARTIFACT_DIR  = Path(__file__).resolve().parents[2] / "ml" / "artifacts"
+MODEL_PATH    = ARTIFACT_DIR / "rf_pipeline.joblib"
+EXPLAINER_PATH = ARTIFACT_DIR / "shap_explainer.joblib"
 METADATA_PATH = ARTIFACT_DIR / "model_metadata.json"
 
-_model = None
-_metadata = None
+_pipeline: Optional[object] = None
+_explainer: Optional[object] = None
+_metadata: Optional[dict] = None
 
 
-def load_model():
-    global _model
-    if _model is None:
-        _model = joblib.load(MODEL_PATH)
-    return _model
+def load_pipeline():
+    global _pipeline
+    if _pipeline is None:
+        _pipeline = joblib.load(MODEL_PATH)
+    return _pipeline
 
 
-def load_metadata():
+def load_explainer():
+    global _explainer
+    if _explainer is None:
+        _explainer = joblib.load(EXPLAINER_PATH)
+    return _explainer
+
+
+def load_metadata() -> dict:
     global _metadata
     if _metadata is None:
         with open(METADATA_PATH, "r", encoding="utf-8") as f:
@@ -27,61 +45,72 @@ def load_metadata():
 
 
 def build_engineered_features(base_features: dict) -> dict:
+    """
+    Derives the 5 engineered features from the 11 base spatial features,
+    using the same formulas as model notebook Section 4.
+    """
     features = dict(base_features)
 
     morning = float(features["traffic_morning"])
-    midday = float(features["traffic_midday"])
+    midday  = float(features["traffic_midday"])
     evening = float(features["traffic_evening"])
-
-    traffic_values = [morning, midday, evening]
     total_traffic = morning + midday + evening
 
-    features["avg_traffic"] = total_traffic / 3.0
-    features["traffic_peak_ratio"] = max(traffic_values) / total_traffic if total_traffic > 0 else 0.0
-
     comp_300 = float(features["comp_count_300"])
-    comp_500 = float(features["comp_count_500"])
-    comp_1k = float(features["comp_count_1k"])
-
-    features["comp_gradient"] = comp_300 / comp_1k if comp_1k > 0 else 0.0
+    comp_1k  = float(features["comp_count_1k"])
 
     dist_transport = float(features["dist_transport"])
-    dist_market = float(features["dist_market"])
-    dist_road = float(features["dist_road"])
+    dist_market    = float(features["dist_market"])
+    dist_road      = float(features["dist_road"])
 
-    features["access_score"] = 1.0 / (1.0 + ((dist_transport + dist_road) / 2.0))
-    features["market_exposure"] = 1.0 / (1.0 + dist_market)
+    features["avg_traffic"]        = total_traffic / 3.0
+    features["traffic_peak_ratio"] = evening / (morning + 1.0)
+    features["comp_gradient"]      = comp_1k - comp_300
+    features["access_score"]       = (3 - dist_transport) + (3 - dist_road) + (3 - dist_market)
+    features["market_exposure"]    = features["avg_traffic"] * (3 - dist_market)
 
     return features
 
 
-def predict_suitability(base_features: dict) -> dict:
-    model = load_model()
+def predict(base_features: dict) -> dict:
+    """
+    Runs the full inference pipeline: feature engineering -> scaling ->
+    Random Forest prediction -> SHAP explanation.
+
+    Returns the predicted probability, label, engineered feature vector,
+    and per-feature SHAP contributions for the positive (favourable) class.
+    """
+    pipeline = load_pipeline()
     metadata = load_metadata()
+    explainer = load_explainer()
 
     features = build_engineered_features(base_features)
     feature_names = metadata["features"]
 
-    X = pd.DataFrame(
-        [[features[name] for name in feature_names]],
-        columns=feature_names
-    )
+    X = pd.DataFrame([[features[name] for name in feature_names]], columns=feature_names)
 
-    prediction = int(model.predict(X)[0])
+    probability = float(pipeline.predict_proba(X)[0][1])
+    prediction = int(pipeline.predict(X)[0])
 
-    probabilities = None
-    confidence = None
+    # SHAP values on the scaled feature space (TreeExplainer expects the
+    # same input the Random Forest step receives)
+    scaler = pipeline.named_steps["scaler"]
+    X_scaled = pd.DataFrame(scaler.transform(X), columns=feature_names)
 
-    if hasattr(model, "predict_proba"):
-        probabilities = model.predict_proba(X)[0].tolist()
-        confidence = float(max(probabilities))
+    raw_shap = explainer.shap_values(X_scaled)
+    if isinstance(raw_shap, np.ndarray) and raw_shap.ndim == 3:
+        sv = raw_shap[0, :, 1]
+    elif isinstance(raw_shap, list):
+        sv = np.array(raw_shap[1])[0]
+    else:
+        sv = raw_shap[0]
 
-    label = "strong" if prediction == 1 else "weak"
+    shap_values = {name: float(val) for name, val in zip(feature_names, sv)}
 
     return {
+        "probability": probability,
         "prediction": prediction,
-        "label": label,
-        "confidence": confidence,
-        "probabilities": probabilities,
-        "features": features
+        "features": features,
+        "shap_values": shap_values,
+        "shap_base_value": float(metadata.get("shap_base_value", 0.5)),
     }

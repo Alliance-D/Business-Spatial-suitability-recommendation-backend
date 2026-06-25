@@ -1,1 +1,1 @@
-# Backend app package
+# Kigali Spatial Suitability — backend application package
