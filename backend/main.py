@@ -99,7 +99,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 import os
 _raw_origins = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost,http://localhost:5173,http://localhost:3000,http://127.0.0.1"
+    "http://localhost,http://localhost:5173,http://localhost:3000,http://127.0.0.1,https://spatial-suitability-frontend.onrender.com"
 )
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 logger.info(f"CORS allowed origins: {ALLOWED_ORIGINS}")
